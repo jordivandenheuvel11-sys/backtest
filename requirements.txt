@@ -1,3 +1,0 @@
-# Only needed for scripts/fetch_yahoo.py (optional - fetch_stooq.py and
-# make_demo_data.py use only the Python standard library).
-yfinance>=0.2.40

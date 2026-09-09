@@ -1,0 +1,21 @@
+# Consolidated from every import across predictor/ (models, datastore, sti).
+# Package names/versions updated where the upstream project's originals are
+# abandoned or fail to install on modern Python - see ../SETUP.md for why.
+
+pandas
+numpy
+scikit-learn
+tensorflow
+plotly
+matplotlib
+seaborn
+ta                  # technical indicators (unchanged from upstream)
+prophet             # replaces upstream's unmaintained "fbprophet" - same API, imported as Prophet
+pyrebase4           # maintained fork of "pyrebase" (Firebase client) - still `import pyrebase` in code
+requests
+textblob            # tweet sentiment scoring (used by datastore/tweety.py)
+twint               # tweet scraper - see ../SETUP.md, likely non-functional today
+jupyter
+jupyter_dash
+dash
+dash-bootstrap-components
