@@ -25,6 +25,17 @@ html, body {
 
 .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.7; }
 
+.fatal-banner {
+  background: #4a1414;
+  color: #ffb4b0;
+  border-bottom: 1px solid #7a2a24;
+  padding: 10px 14px;
+  font-size: 13px;
+  white-space: pre-line;
+  line-height: 1.5;
+}
+.fatal-banner code { background: #2a0f0f; padding: 1px 5px; border-radius: 3px; }
+
 .topbar {
   display: flex;
   align-items: center;

@@ -31,6 +31,13 @@ function setStatus(msg, isError) {
   el.style.color = isError ? "var(--red)" : "var(--text-dim)";
 }
 
+function fatal(msg) {
+  const el = $("fatalBanner");
+  el.textContent = msg;
+  el.hidden = false;
+  setStatus(msg, true);
+}
+
 // Parses the CSV formats produced by scripts/fetch_yahoo.py, scripts/fetch_stooq.py
 // and scripts/make_demo_data.py: header "time,open,high,low,close,volume".
 // `time` may be unix seconds/milliseconds, or an ISO-8601 string ending in Z.
@@ -116,33 +123,48 @@ function attachMarkers(series) {
   return { setMarkers: (m) => series.setMarkers(m) };
 }
 
-const priceChart = makeChart($("priceChart"));
-const candleSeries = addSeriesCompat(priceChart, "CandlestickSeries", {
-  upColor: "#26a69a",
-  downColor: "#ef5350",
-  borderVisible: false,
-  wickUpColor: "#26a69a",
-  wickDownColor: "#ef5350",
-});
-const volumeSeries = addSeriesCompat(priceChart, "HistogramSeries", {
-  priceFormat: { type: "volume" },
-  priceScaleId: "vol",
-});
-volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
-const markers = attachMarkers(candleSeries);
+let priceChart, candleSeries, volumeSeries, markers, equityChart, equitySeries;
 
-const equityChart = makeChart($("equityChart"));
-const equitySeries = addSeriesCompat(equityChart, "AreaSeries", {
-  lineColor: "#4f8ef7",
-  topColor: "rgba(79,142,247,0.35)",
-  bottomColor: "rgba(79,142,247,0.02)",
-  lineWidth: 2,
-});
+if (!LWC) {
+  fatal(
+    "Chart library failed to load (vendor/lightweight-charts.standalone.production.js).\n" +
+    "This almost always means the page was opened directly as a file:// URL instead of through a local " +
+    "server, or the server isn't serving the repo root. Run `python3 -m http.server 8000` from the repo " +
+    "root and open http://localhost:8000/web/ - see README.md."
+  );
+} else {
+  try {
+    priceChart = makeChart($("priceChart"));
+    candleSeries = addSeriesCompat(priceChart, "CandlestickSeries", {
+      upColor: "#26a69a",
+      downColor: "#ef5350",
+      borderVisible: false,
+      wickUpColor: "#26a69a",
+      wickDownColor: "#ef5350",
+    });
+    volumeSeries = addSeriesCompat(priceChart, "HistogramSeries", {
+      priceFormat: { type: "volume" },
+      priceScaleId: "vol",
+    });
+    volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+    markers = attachMarkers(candleSeries);
 
-// Keep the two time axes lined up.
-priceChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
-  if (range) equityChart.timeScale().setVisibleLogicalRange(range);
-});
+    equityChart = makeChart($("equityChart"));
+    equitySeries = addSeriesCompat(equityChart, "AreaSeries", {
+      lineColor: "#4f8ef7",
+      topColor: "rgba(79,142,247,0.35)",
+      bottomColor: "rgba(79,142,247,0.02)",
+      lineWidth: 2,
+    });
+
+    // Keep the two time axes lined up.
+    priceChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+      if (range) equityChart.timeScale().setVisibleLogicalRange(range);
+    });
+  } catch (err) {
+    fatal("Failed to initialize the chart: " + (err.message || err));
+  }
+}
 
 // ---------------------------------------------------------------------------
 // State
@@ -197,7 +219,7 @@ function populateContractSelect() {
 
 async function loadManifest() {
   const res = await fetch("../data/manifest.json", { cache: "no-store" });
-  if (!res.ok) throw new Error("Could not load data/manifest.json (HTTP " + res.status + ")");
+  if (!res.ok) throw new Error("HTTP " + res.status);
   manifest = await res.json();
 }
 
@@ -583,12 +605,18 @@ $("closePosBtn").addEventListener("click", () => { engine.closePosition(); rende
 // ---------------------------------------------------------------------------
 
 async function boot() {
+  if (!priceChart) return; // fatal() already explained why - see the banner at the top of the page.
   populateContractSelect();
   $("contractSelect").value = "ES";
   try {
     await loadManifest();
   } catch (err) {
-    setStatus(String(err.message || err), true);
+    fatal(
+      "Could not load data/manifest.json (" + (err.message || err) + ").\n" +
+      "Make sure you started the server from the repo ROOT (not the web/ folder) - run " +
+      "`python3 -m http.server 8000` in the repo root and open http://localhost:8000/web/. " +
+      "Opening index.html directly (a file:// URL) will not work: browsers block fetch() for local files."
+    );
     showEmptyState();
     return;
   }
